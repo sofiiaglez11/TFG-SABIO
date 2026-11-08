@@ -71,7 +71,7 @@ class LangGraphService:
         self.mcp_client = mcp_client
         self.db_service = db_service
         self.analytics_service = analytics_service
-        
+
         self._study_flow_cache: Dict[str, bool] = {}
         self._user_message_counts: Dict[str, int] = {}
         self._plan_review_locks: Dict[str, asyncio.Lock] = {}
@@ -101,7 +101,7 @@ class LangGraphService:
                 "USER_MESSAGE": "router",
                 "ONBOARDING": "onboarding",
                 "LOGIN_GREETING": "login_greeting",
-                "DAILY_REVIEW": "planner"  
+                "DAILY_REVIEW": "planner"
             }
         )
 
@@ -138,7 +138,7 @@ class LangGraphService:
         return self._study_flow_cache[user_id]
 
     async def _set_study_flow_state(self, user_id: str, state: bool, session_entry_id: str = None) -> None:
-        self._study_flow_cache[user_id] = state 
+        self._study_flow_cache[user_id] = state
         await self.db_service.set_study_flow_state(user_id, state, session_entry_id=session_entry_id)
 
     def _has_wellbeing_signal(self, user_message: str) -> bool:
@@ -240,7 +240,7 @@ class LangGraphService:
             and t["name"] != "get_agent_capabilities"
             and t["name"] not in self.PLANNER_ONLY_TOOLS
         ]
-        
+
         agent = self.academic_agent.fork()
         agent.set_config(filtered_tools)
         agent.load_history(history_msgs)
@@ -254,7 +254,7 @@ class LangGraphService:
 
             print(f"[ACADEMIC] Herramienta: {name}", file=sys.stderr)
             res = await self.mcp_client.call_tool(name, arguments)
-            
+
             SESSION_TOOLS = {"start_timer", "stop_timer", "log_time_entry", "log_study_hours", "edit_time_entry", "delete_time_entry"}
 
             if name in SESSION_TOOLS:
@@ -279,7 +279,7 @@ class LangGraphService:
             user_message=message_with_context,
             tool_executor=intercepted_tool_executor
         )
-       
+
         run_adv = periodic_trigger
         trigger_reason = "periodic_counter" if periodic_trigger else ""
 
@@ -299,7 +299,7 @@ class LangGraphService:
 
         tools_raw = state.get("tools_raw", [])
         filtered_tools = [t for t in tools_raw if t["name"].startswith("wb_")]
-        
+
         agent = self.wellbeing_agent.fork()
         agent.set_config(filtered_tools)
         agent.load_history(history_msgs)
@@ -312,7 +312,7 @@ class LangGraphService:
                 arguments["user_id"] = user_id
 
             res = await self.mcp_client.call_tool(name, arguments)
-            
+
             if name in {"wb_add_study_report", "wb_add_wellbeing_report"}:
                 report_added = True
                 if name == "wb_add_study_report":
@@ -336,12 +336,15 @@ class LangGraphService:
             run_adv = True
             trigger_reason = "periodic_counter"
         else:
-            run_adv = (
-                not in_study_report_flow
-                and self._has_wellbeing_signal(user_message)
-                and self._advisor_cooldown_elapsed(user_id)
-            )
+            signal = self._has_wellbeing_signal(user_message)
+            cooldown_ok = self._advisor_cooldown_elapsed(user_id)
+            run_adv = (not in_study_report_flow) and signal and cooldown_ok
             trigger_reason = "wellbeing_signal" if run_adv else ""
+            print(
+                f"[ADVISOR][DECISION] wellbeing: signal={signal} cooldown_ok={cooldown_ok} "
+                f"in_flow={in_study_report_flow} -> run={run_adv}",
+                file=sys.stderr,
+            )
 
         return {
             "response_text": result.text,
@@ -357,7 +360,7 @@ class LangGraphService:
 
         tools_raw = state.get("tools_raw", [])
         filtered_tools = [t for t in tools_raw if t["name"] == "get_agent_capabilities"]
-        
+
         agent = self.general_agent.fork()
         agent.set_config(filtered_tools)
         agent.load_history(history_msgs)
@@ -446,12 +449,12 @@ class LangGraphService:
         """
         user_id = state.get("user_id", "")
         event_type = state.get("event_type", "USER_MESSAGE")
-        
+
         if event_type == "DAILY_REVIEW":
             message_with_context = state.get("proactive_prompt", "")
         else:
             message_with_context = state.get("message_with_context", "") or state.get("user_message", "")
-            
+
         history_msgs = state.get("history_msgs", [])
         periodic_trigger = state.get("periodic_trigger", False)
 
@@ -533,12 +536,13 @@ class LangGraphService:
         response_text = state.get("response_text", "")
         history_msgs = state.get("history_msgs", [])
         advisor_trigger = state.get("advisor_trigger", "")
+        in_flow = state.get("in_study_report_flow", False)
 
-        last_chunk = response_text.strip().split("\n")[-1]
-        if "?" in last_chunk:
+        # Solo se omite si la pregunta pendiente es del informe de sesión.
+        # Las preguntas de bienestar general no bloquean al advisor.
+        if in_flow and response_text.strip().endswith("?"):
+            print("[ADVISOR] Omitido: informe de sesión en curso con pregunta pendiente.", file=sys.stderr)
             return {"response_text": response_text}
-
-        self._last_advisor_run_count[user_id] = self._user_message_counts.get(user_id, 0)
 
         agent = self.advisor_agent.fork()
         agent.set_config([])
@@ -549,7 +553,8 @@ class LangGraphService:
         tasks_status_note = (
             "SÍ (ya se ha mencionado el tema de tareas en la sesión)."
             if tasks_discussed else
-            "NO (¡IMPORTANTE: Si no se ha hablado de tareas hoy y el estudiante tiene tareas pendientes o activas, pregúntale amigablemente cómo las lleva o si quiere ponerse con alguna de ellas!)."
+            "NO. Solo si el estudiante tiene tareas pendientes o activas y no se ha hablado de ellas, "
+            "puedes mencionarlo como parte del consejo; no es obligatorio."
         )
         academic_text = ""
         wellbeing_text = ""
@@ -584,7 +589,6 @@ class LangGraphService:
             f"{patterns_text}\n\n"
             f"INSTRUCCIONES:\n"
             f"1. Analiza los datos de arriba buscando patrones concretos:\n"
-            f"   - Si NO se ha hablado de tareas hoy y hay tareas pendientes o activas, hazle una pregunta amigable sobre su avance o estado.\n"
             f"   - Asignaturas con pocas horas o baja concentración\n"
             f"   - Días de la semana con peor rendimiento o peor descanso\n"
             f"   - Sesiones nocturnas tardías\n"
@@ -594,15 +598,15 @@ class LangGraphService:
             f"   - Revisa la lista de 'CONSEJOS / RECOMENDACIONES DADAS ANTERIORMENTE' arriba.\n"
             f"   - Si el consejo o patrón que vas a sugerir ES EL MISMO o MUY SIMILAR a uno que ya le diste anteriormente:\n"
             f"     a) Si no hay novedad sustancial, responde exactamente: NO_ADVICE (no repitas el mismo consejo).\n"
-            f"     b) Si la situación es urgente y exige volver a mencionarlo, NO des la explicación larga; RESÚMELA AL MÁXIMO en 1 sola frase corta usando una muletilla como 'Como te comenté antes...' o 'Como pequeña sugerencia rápida...'.\n"
-            f"3. Si encuentras un patrón NUEVO y relevante, redacta UNA recomendación concreta y empática citando datos específicos (asignatura, día, horas).\n"
+            f"     b) Si la situación es urgente y exige volver a mencionarlo, RESÚMELA AL MÁXIMO en 1 sola frase corta usando una muletilla como 'Como te comenté antes...'.\n"
+            f"3. Si encuentras un patrón NUEVO y relevante en los datos, redacta UNA recomendación concreta y empática citando datos específicos (asignatura, día, horas).\n"
             f"4. Introduce la recomendación con una frase natural como:\n"
             f"   'Por cierto, revisando tus datos de esta semana...' o 'Un pequeño apunte sobre tu progreso:...'\n"
             f"5. Si los datos son equilibrados y no hay nada destacable, responde exactamente: NO_ADVICE\n"
             f"6. NUNCA uses separadores como '---', HTML ni markdown excesivo.\n"
-            f"7. REGLA CRÍTICA DE NO INTERFERENCIA: Si la respuesta del agente principal (mostrada arriba) "
-            f"contiene una pregunta directa al usuario, responde OBLIGATORIAMENTE: NO_ADVICE. "
-            f"Nunca añadas un consejo ni una nueva pregunta cuando el usuario ya tiene una pregunta pendiente de responder."
+            f"7. NUNCA hagas preguntas al usuario: tu rol es solo aportar un consejo puntual.\n"
+            f"8. REGLA CRÍTICA DE NO INTERFERENCIA: Si la respuesta del agente principal (mostrada arriba) "
+            f"contiene una pregunta directa al usuario, responde OBLIGATORIAMENTE: NO_ADVICE."
         )
 
         result = await agent.run_agentic_conversation(
@@ -612,13 +616,17 @@ class LangGraphService:
 
         advice_text = (result.text or "").strip()
         if advice_text and "NO_ADVICE" not in advice_text:
+            # El cooldown solo se consume cuando hay consejo real.
+            self._last_advisor_run_count[user_id] = self._user_message_counts.get(user_id, 0)
             updated_response = f"{response_text}\n\n{advice_text}"
             active_dom = state.get("active_domain", "ACADEMIC")
+            print(f"[ADVISOR] Consejo generado (trigger={advisor_trigger}).", file=sys.stderr)
             return {
                 "response_text": updated_response,
                 "active_domain": f"{active_dom}+ADVISOR"
             }
 
+        print(f"[ADVISOR] NO_ADVICE (trigger={advisor_trigger}).", file=sys.stderr)
         return {"response_text": response_text}
 
     TASK_TOOLS = {"get_tasks", "add_task", "edit_task", "complete_task", "mark_task_active", "delete_task", "set_task_hierarchy", "start_timer", "stop_timer"}
@@ -719,7 +727,7 @@ class LangGraphService:
 
     async def run_daily_plan_review(self, user_id: str, tools_raw: list, force: bool = False) -> Dict[str, Any]:
         """
-        Activa al agente planificador en modo 'DAILY_REVIEW'. 
+        Activa al agente planificador en modo 'DAILY_REVIEW'.
         Usa el candado para no dispararlo doble en llamadas concurrentes.
         """
         lock = self._plan_review_locks.setdefault(user_id, asyncio.Lock())

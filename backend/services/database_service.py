@@ -121,14 +121,19 @@ class DatabaseService:
     ############################################################################
     # METHODS FOR USERS
  
-    async def create_user(self, email: str, name: str, hashed_password: str, role: str = "student") -> dict:
+    async def create_user(self, email: str, name: str, hashed_password: str, role: str = "student",
+                          consent_wellness: bool = False, consent_clockify: bool = False) -> dict:
         """Crea un nuevo usuario en la base de datos."""
+        from datetime import datetime, timezone
         user = {
             "email": email,
             "name": name,
             "password": hashed_password,
             "role": role,
-            "clockify": None
+            "clockify": None,
+            "consent_wellness": consent_wellness,
+            "consent_clockify": consent_clockify,
+            "consent_date": datetime.now(timezone.utc).isoformat(),
         }
         result = await self.users.insert_one(user)
         user["_id"] = str(result.inserted_id)

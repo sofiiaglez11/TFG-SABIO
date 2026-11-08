@@ -1,45 +1,22 @@
+"use client";
+
 import { useState } from 'react';
-import { Eye, EyeOff } from "lucide-react";
-
-
-// export default function LoginForm({ onLogin }) {
-//     const [email, setEmail] = useState('');
-//     const [password, setPassword] = useState('');
+import { Eye, EyeOff, LogIn } from "lucide-react";
+import styles from "./AuthForm.module.css";
 
 export default function LoginForm({ onLogin, message, loading }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-
     const handleSubmit = async (e) => {
-
-        e.preventDefault(); // para evitar que la página se recargue al enviar
-
+        e.preventDefault();
         await onLogin(email, password);
-    }
-
+    };
 
     return (
-        <form onSubmit={handleSubmit}
-
-
-            style={{
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '20px',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                flexDirection: 'column',
-                width: '90%',
-                maxWidth: '600px',
-                margin: '0 auto'
-
-            }}>
-
-
-            <label htmlFor="email" style={{ marginBottom: '4px', marginTop: '12px' }}>
+        <form onSubmit={handleSubmit} className={styles.form}>
+            <label htmlFor="email" className={`${styles.label} ${styles.labelFirst}`}>
                 Email:
             </label>
             <input
@@ -48,89 +25,58 @@ export default function LoginForm({ onLogin, message, loading }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border, #cbd5e1)',
-                    background: 'var(--bg-input, #f8fafc)',
-                    color: 'var(--text-primary, #0f172a)',
-                    fontSize: '14px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                }}
+                className={styles.input}
             />
 
-
-
-
-            <label htmlFor="password" style={{ marginBottom: '4px', marginTop: '12px' }}>
+            <label htmlFor="password" className={styles.label}>
                 Contraseña:
             </label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+            <div className={styles.passwordWrapper}>
                 <input
                     type={showPassword ? "text" : "password"}
                     id="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    style={{
-                        width: '100%',
-                        padding: '10px 40px 10px 12px',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border, #cbd5e1)',
-                        background: 'var(--bg-input, #f8fafc)',
-                        color: 'var(--text-primary, #0f172a)',
-                        fontSize: '14px',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                    }}
+                    className={`${styles.input} ${styles.passwordInput}`}
                 />
                 <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                        position: 'absolute',
-                        right: '10px',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--text-secondary, #64748b)',
-                    }}
+                    className={styles.togglePasswordBtn}
                     title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                     {showPassword ? (
-                        <EyeOff size={20} strokeWidth={2} />
+                        <EyeOff size={18} strokeWidth={2} />
                     ) : (
-                        <Eye size={20} strokeWidth={2} />
+                        <Eye size={18} strokeWidth={2} />
                     )}
                 </button>
             </div>
 
-
-
             {message && (
-                <div style={{
-                    marginTop: '14px',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    backgroundColor: message.type === 'error' ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
-                    color: message.type === 'error' ? '#ef4444' : '#22c55e',
-                    border: `1px solid ${message.type === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
-                }}>
+                <div className={`${styles.messageBox} ${message.type === 'error' ? styles.messageError : styles.messageSuccess}`}>
                     {message.text}
                 </div>
             )}
 
-            <button type="submit" style={{ marginTop: '20px' }} disabled={loading}>
-                {loading ? 'Cargando...' : 'Login'}
-            </button>        </form>
-
-
+            <button
+                type="submit"
+                disabled={loading}
+                className={styles.submitBtn}
+            >
+                {loading ? (
+                    <>
+                        <span className={styles.spinner} />
+                        <span>Iniciando sesión...</span>
+                    </>
+                ) : (
+                    <>
+                        <LogIn size={18} />
+                        <span>Iniciar sesión</span>
+                    </>
+                )}
+            </button>
+        </form>
     );
 }

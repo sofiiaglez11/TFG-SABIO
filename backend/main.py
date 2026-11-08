@@ -527,7 +527,10 @@ class RegisterRequest(BaseModel):
     email: str
     name: str
     password: str
-    role: str = "student" 
+    confirm_password: Optional[str] = None
+    role: str = "student"
+    consent_wellness: bool = False
+    consent_clockify: bool = False
 
 class ProactiveGreetingRequest(BaseModel):
     is_login: Optional[bool] = False
@@ -735,13 +738,25 @@ async def login(request: LoginRequest):
 
 @app.post("/api/register")
 async def register(request: RegisterRequest):
+    if request.confirm_password is not None and request.password != request.confirm_password:
+        raise HTTPException(status_code=400, detail="Las contraseñas no coinciden")
+    if not request.consent_wellness or not request.consent_clockify:
+        raise HTTPException(status_code=400, detail="Debes aceptar los consentimientos de privacidad para registrarte")
+
     existing = await db_service.get_user_by_email(request.email)
     if existing:
         raise HTTPException(status_code=400, detail="Ya existe una cuenta con ese email")
-    
+
     role = request.role if request.role in ("student", "teacher") else "student"
     hashed = hash_password(request.password)
-    user = await db_service.create_user(request.email, request.name, hashed, role=role)
+    user = await db_service.create_user(
+        request.email,
+        request.name,
+        hashed,
+        role=role,
+        consent_wellness=request.consent_wellness,
+        consent_clockify=request.consent_clockify,
+    )
     return {"message": "Usuario creado correctamente", "user_id": user["_id"]}
 
 @app.get("/api/chat/history")

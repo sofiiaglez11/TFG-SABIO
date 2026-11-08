@@ -103,6 +103,9 @@ export default function AnalyticsDashboard({ isOpen, onClose, isInline = false, 
           initialGrades[item.id] = item.grade !== undefined && item.grade !== null ? item.grade : "";
         });
         setGradeInputs(initialGrades);
+      } else {
+        const errText = await res.text();
+        console.error("Error al obtener estadísticas del dashboard:", res.status, errText);
       }
     } catch (err) {
       console.error("Error de conexión:", err);

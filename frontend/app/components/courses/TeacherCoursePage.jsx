@@ -4,6 +4,7 @@ import {
   BACKEND_URL, getToken, authHeaders,
   PageShell, FullPageMessage, BackButton, ErrorBanner, MarkdownText, Badge
 } from './shared';
+import ConfirmModal from '../ConfirmModal';
 
 const iconLabel = { display: "inline-flex", alignItems: "center", gap: "6px" };
 
@@ -128,6 +129,8 @@ export default function TeacherCoursePage({ courseId, onNavigate }) {
   const [generating, setGenerating] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const abortRef = useRef(null);
   const menuRef = useRef(null);
@@ -210,15 +213,22 @@ export default function TeacherCoursePage({ courseId, onNavigate }) {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     setShowMenu(false);
-    if (!confirm("¿Eliminar este curso? Esta acción es irreversible.")) return;
+    setShowDeleteModal(true);
+  };
+
+  const executeDelete = async () => {
+    setDeleting(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/courses/${courseId}`, { method: "DELETE", headers: authHeaders(token) });
       if (!res.ok) throw new Error((await res.json()).detail);
+      setShowDeleteModal(false);
       onNavigate({ view: "list" });
     } catch (e) {
       setError(e.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -426,6 +436,17 @@ export default function TeacherCoursePage({ courseId, onNavigate }) {
       <StudentsTable
         stats={stats}
         onSelect={(studentId) => onNavigate({ view: "student", courseId, studentId })}
+      />
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Eliminar curso"
+        description="¿Estás seguro de que deseas eliminar este curso? Esta acción es irreversible y los estudiantes matriculados perderán el acceso."
+        confirmText="Eliminar curso"
+        cancelText="Cancelar"
+        loading={deleting}
+        onConfirm={executeDelete}
+        onClose={() => setShowDeleteModal(false)}
       />
     </PageShell>
   );

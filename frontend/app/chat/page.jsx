@@ -324,10 +324,15 @@ export default function ChatPage() {
             {!isSidebarCollapsed ? (
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", flexShrink: 0 }} />
+                  {/* <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", flexShrink: 0 }} /> */}
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-primary)" }}>Asistente Inteligente</div>
-                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Académico y Personal</div>
+                    {/* <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-primary)" }}>Asistente Inteligente</div>
+                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Académico y Personal</div> */}
+
+                    <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--text-primary)" }}>SABIO</div>
+                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Sistema Académico y de Bienestar</div>
+                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Inteligente para la Organización</div>
+
                   </div>
                 </div>
                 <button

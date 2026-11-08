@@ -23,9 +23,9 @@ class AnalyticsService:
 
     async def _get_user_clockify_service(self, user_id: str) -> Optional[ClockifyService]:
         creds = await self.db_service.get_clockify_credentials(user_id)
-        if creds and creds.get("api_key"):
+        if creds and (creds.get("api_key") or creds.get("token")):
             return ClockifyService(
-                api_key=creds["api_key"],
+                api_key=creds.get("api_key") or creds.get("token"),
                 workspace_id=creds.get("workspace_id")
             )
         return None
@@ -741,49 +741,12 @@ class AnalyticsService:
 
         subjects = await self.db_service.get_subjects_by_user(user_id)
 
-        # Obtener periodo activo si lo hay
-        active_period = await self.db_service.get_active_period(user_id)
-        start_date = None
-        end_date = None
-        if active_period:
-            start_date = active_period.get("start_date")
-            end_date = active_period.get("end_date")
-
-        # Obtener credenciales de Clockify del usuario
-        clockify_creds = await self.db_service.get_clockify_credentials(user_id)
-
         # Obtener entradas de tiempo de Clockify (y primar la caché para los submétodos)
-        clockify_entries = []
-        if clockify_creds and clockify_creds.get("api_key"):
-            try:
-                cs = ClockifyService(
-                    api_key=clockify_creds["api_key"] or clockify_creds.get("token"),
-                    workspace_id=clockify_creds.get("workspace_id")
-                )
-                if start_date or end_date:
-                    clockify_entries = await asyncio.to_thread(
-                        cs.get_time_entries, start_date=start_date, end_date=end_date
-                    )
-                else:
-                    clockify_entries = await asyncio.to_thread(
-                        cs.get_time_entries, days_back=effective_days
-                    )
-                # Primar la caché con las entries recién obtenidas para que los submétodos
-                # (get_patterns, get_time_breakdown, get_extended_subject_metrics) no
-                # repitan la llamada a Clockify para el mismo rango.
-                self._clockify_cache[self._clockify_cache_key(user_id, effective_days)] = clockify_entries
-                # get_extended_subject_metrics usa siempre days=14; si effective_days==14 ya
-                # está cubierto, si no, precargar también ese rango para evitar una llamada extra.
-                if effective_days != 14:
-                    try:
-                        entries_14 = await asyncio.to_thread(cs.get_time_entries, days_back=14)
-                        self._clockify_cache[self._clockify_cache_key(user_id, 14)] = entries_14
-                    except Exception:
-                        self._clockify_cache[self._clockify_cache_key(user_id, 14)] = []
-            except Exception as e:
-                # Loggear el error pero no fallar la petición completa
-                print(f"[DASHBOARD] Error fetching Clockify entries: {e}", file=sys.stderr)
-                clockify_entries = []
+        clockify_entries = await self._get_clockify_entries(user_id, effective_days)
+
+        # get_extended_subject_metrics usa siempre days=14; si effective_days != 14, precargamos
+        if effective_days != 14:
+            await self._get_clockify_entries(user_id, 14)
 
         # Agrupar segundos de Clockify por projectId
         project_seconds = {}

@@ -4,6 +4,7 @@ import {
   BACKEND_URL, getToken, authHeaders,
   PageShell, FullPageMessage, BackButton, ErrorBanner, CourseHeader
 } from './shared';
+import ConfirmModal from '../ConfirmModal';
 
 const iconLabel = { display: "inline-flex", alignItems: "center", gap: "6px" };
 
@@ -20,6 +21,8 @@ export default function StudentCoursePage({ courseId, onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [fatalError, setFatalError] = useState(null);
   const [error, setError] = useState(null);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   const fetchCourse = async () => {
     if (!token) { /* router.push("/login") */ return; }
@@ -40,14 +43,21 @@ export default function StudentCoursePage({ courseId, onNavigate }) {
 
   useEffect(() => { if (courseId) fetchCourse(); }, [courseId]);
 
-  const handleLeave = async () => {
-    if (!confirm("¿Seguro que quieres desmatricularte de este curso?")) return;
+  const handleLeave = () => {
+    setShowLeaveModal(true);
+  };
+
+  const executeLeave = async () => {
+    setLeaving(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/courses/${courseId}/leave`, { method: "DELETE", headers: authHeaders(token) });
       if (!res.ok) throw new Error((await res.json()).detail);
+      setShowLeaveModal(false);
       onNavigate({ view: "list" });
     } catch (e) {
       setError(e.message);
+    } finally {
+      setLeaving(false);
     }
   };
 
@@ -94,6 +104,17 @@ export default function StudentCoursePage({ courseId, onNavigate }) {
       </div>
 
       <ErrorBanner message={error} style={{ marginTop: "16px" }} />
+
+      <ConfirmModal
+        isOpen={showLeaveModal}
+        title="Desmatricularse del curso"
+        description={`¿Seguro que quieres desmatricularte de "${course?.name}"? Tu historial de estadísticas se conservará, pero dejarás de tener acceso al curso.`}
+        confirmText="Desmatricularse"
+        cancelText="Cancelar"
+        loading={leaving}
+        onConfirm={executeLeave}
+        onClose={() => setShowLeaveModal(false)}
+      />
     </PageShell>
   );
 }

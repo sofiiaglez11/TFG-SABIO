@@ -6,7 +6,6 @@ import LoginForm from "../components/LoginForm";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-
 export default function LoginPage() {
     const router = useRouter();
     const [message, setMessage] = useState(null);
@@ -18,7 +17,6 @@ export default function LoginPage() {
             router.push("/chat");
         }
     }, [router]);
-
 
     const handleLogin = async (email, password) => {
         setMessage(null);
@@ -50,9 +48,8 @@ export default function LoginPage() {
                 localStorage.setItem("userName", data.user.name || "");
                 localStorage.setItem("userEmail", data.user.email || "");
             }
-            setMessage({ type: 'success', text: "¡Inicio de sesión correcto! Redirigiendo..." });
+            // setMessage({ type: 'success', text: "¡Inicio de sesión correcto! Redirigiendo..." });
 
-            // Pausa de 1 segundo para mostrar el mensaje de éxito antes de navegar al chat
             setTimeout(() => {
                 router.push("/chat");
             }, 1000);
@@ -63,28 +60,26 @@ export default function LoginPage() {
         }
     };
 
-
-
-
     return (
         <div style={{
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            height: '100vh',
+            minHeight: '100vh',
+            padding: '24px',
             gap: '16px',
             backgroundColor: 'var(--bg-page)'
         }}>
-            <h1 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>Iniciar sesión</h1>
+            <h1 style={{ color: 'var(--text-primary)', marginBottom: '4px', fontSize: '26px', fontWeight: '700' }}>Iniciar sesión</h1>
             <LoginForm
                 onLogin={handleLogin}
                 message={message}
                 loading={loading}
             />
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
                 ¿No tienes cuenta?{' '}
-                <a href="/register" style={{ color: 'var(--brand)' }}>Regístrate</a>
+                <a href="/register" style={{ color: 'var(--brand)', fontWeight: '600' }}>Regístrate</a>
             </p>
         </div>
     );

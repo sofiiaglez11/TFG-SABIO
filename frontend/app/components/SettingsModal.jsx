@@ -5,6 +5,7 @@ import { X, Copy, Check, Trash2, UserX, BarChart2, Clock, Settings, Tag as TagIc
 import ClockifyConfigPanel from "./ClockifyConfigPanel";
 import TagBadge from "./TagBadge";
 import TagColorPickerModal from "./TagColorPickerModal";
+import ConfirmModal from "./ConfirmModal";
 import { setTagColorLocal, refreshTagColors } from "../utils/tagColorStore";
 import styles from "./SettingsModal.module.css";
 
@@ -31,6 +32,7 @@ export default function SettingsModal({ isOpen, onClose, initialTab = "clockify"
   const [tagsLoading, setTagsLoading] = useState(false);
   const [selectedTagForColor, setSelectedTagForColor] = useState(null);
   const [mergeMessage, setMergeMessage] = useState("");
+  const [confirmConfig, setConfirmConfig] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -195,15 +197,7 @@ export default function SettingsModal({ isOpen, onClose, initialTab = "clockify"
     }
   };
 
-  const handleUnfollowUser = async (targetUserId, targetUserName) => {
-    if (!targetUserId) {
-      console.error("ID de usuario no válido para dejar de seguir:", targetUserId);
-      return;
-    }
-    const displayName = targetUserName ? `"${targetUserName}"` : "este usuario";
-    if (!window.confirm(`¿Estás seguro de que deseas dejar de seguir a ${displayName}?`)) {
-      return;
-    }
+  const executeUnfollow = async (targetUserId) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
@@ -235,15 +229,24 @@ export default function SettingsModal({ isOpen, onClose, initialTab = "clockify"
     }
   };
 
-  const handleRevokeFollower = async (followerUserId, followerUserName) => {
-    if (!followerUserId) {
-      console.error("ID de usuario no válido para revocar acceso:", followerUserId);
+  const handleUnfollowUser = (targetUserId, targetUserName) => {
+    if (!targetUserId) {
+      console.error("ID de usuario no válido para dejar de seguir:", targetUserId);
       return;
     }
-    const displayName = followerUserName ? `"${followerUserName}"` : "este usuario";
-    if (!window.confirm(`¿Estás seguro de que deseas quitarle el acceso a tus estadísticas a ${displayName}?`)) {
-      return;
-    }
+    const displayName = targetUserName ? `"${targetUserName}"` : "este usuario";
+    setConfirmConfig({
+      title: "Dejar de seguir",
+      description: `¿Estás seguro de que deseas dejar de seguir a ${displayName}? Ya no podrás ver sus estadísticas de estudio compartidas.`,
+      confirmText: "Dejar de seguir",
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        await executeUnfollow(targetUserId);
+      }
+    });
+  };
+
+  const executeRevoke = async (followerUserId) => {
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
@@ -267,6 +270,23 @@ export default function SettingsModal({ isOpen, onClose, initialTab = "clockify"
     } catch (err) {
       console.error("Error de conexión al revocar acceso:", err);
     }
+  };
+
+  const handleRevokeFollower = (followerUserId, followerUserName) => {
+    if (!followerUserId) {
+      console.error("ID de usuario no válido para revocar acceso:", followerUserId);
+      return;
+    }
+    const displayName = followerUserName ? `"${followerUserName}"` : "este usuario";
+    setConfirmConfig({
+      title: "Quitar acceso",
+      description: `¿Estás seguro de que deseas quitarle el acceso a tus estadísticas a ${displayName}? Este usuario ya no podrá ver tus datos de estudio.`,
+      confirmText: "Quitar acceso",
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        await executeRevoke(followerUserId);
+      }
+    });
   };
 
   if (!isOpen) return null;
@@ -524,6 +544,16 @@ export default function SettingsModal({ isOpen, onClose, initialTab = "clockify"
         currentColor={selectedTagForColor?.color}
         onClose={() => setSelectedTagForColor(null)}
         onSelectColor={handleUpdateTagColor}
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(confirmConfig)}
+        title={confirmConfig?.title || ""}
+        description={confirmConfig?.description || ""}
+        confirmText={confirmConfig?.confirmText || "Confirmar"}
+        cancelText={confirmConfig?.cancelText || "Cancelar"}
+        onConfirm={confirmConfig?.onConfirm}
+        onClose={() => setConfirmConfig(null)}
       />
     </div>
   );
