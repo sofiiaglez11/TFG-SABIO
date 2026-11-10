@@ -60,7 +60,7 @@ El sistema implementa una arquitectura desacoplada en tres capas principales:
 
 ### Frontend
 - Node.js (v18+)
-- Next.js 15 (App Router)
+- Next.js 16 (App Router)
 - React 19
 - CSS Modules y Lucide React
 
@@ -177,8 +177,8 @@ La plataforma se ejecuta en Docker, pero la validación técnica, las pruebas au
 ### 1. Pruebas automatizadas (Pytest)
 El conjunto consta de 149 pruebas automatizadas distribuidas en tres módulos:
 
-- **`test_unit.py` (85 pruebas):** Cifrado simétrico Fernet, hashing bcrypt, ciclo de vida de tokens JWT, manipulación de fechas, normalización de etiquetas y cálculos estadísticos deterministas.
-- **`test_api.py` (47 pruebas):** Validación de rutas REST mediante `TestClient`, autenticación Bearer, control de acceso por roles (alumno/profesor) y esquemas de entrada/salida.
+- **`test_unit.py` (79 pruebas):** Cifrado simétrico Fernet, hashing bcrypt, ciclo de vida de tokens JWT, manipulación de fechas, normalización de etiquetas y cálculos estadísticos deterministas.
+- **`test_api.py` (53 pruebas):** Validación de rutas REST mediante `TestClient`, autenticación Bearer, control de acceso por roles (alumno/profesor) y esquemas de entrada/salida.
 - **`test_planner_guard.py` (17 pruebas):** Verificación de las guardas de seguridad que impiden el reajuste automático de exámenes y entregas con fecha fija.
 
 Para ejecutar la batería completa con informe de cobertura:
