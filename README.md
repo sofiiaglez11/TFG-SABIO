@@ -30,7 +30,7 @@ Trabajo Fin de Grado desarrollado en la Escuela Técnica Superior de Ingeniería
 - **Planificación adaptativa:** Generación y reajuste dinámico de planes de estudio según plazos de entrega, exámenes fijos y disponibilidad horaria.
 - **Analíticas visuales e interactividad:** Gráficos de evolución temporal, correlación entre hábitos de descanso y rendimiento, y comparativas.
 - **Módulo docente colaborativo:** Vista para profesores con estadísticas agregadas y anonimizadas de los cursos, acompañadas de conclusiones sintéticas generadas por IA.
-- **Seguridad y privacidad:** Cifrado simétrico Fernet para credenciales externas de Clockify, almacenamiento seguro de contraseñas mediante bcrypt y autenticación basada en tokens JWT.
+- **Seguridad y privacidad:** Cifrado simétrico Fernet para credenciales externas de Clockify, almacenamiento seguro de contraseñas mediante bcrypt, autenticación basada en tokens JWT y consentimiento explícito e informado del usuario para el tratamiento de datos de bienestar y de Clockify.
 
 ---
 
@@ -121,7 +121,7 @@ La plataforma está diseñada para desplegarse y ejecutarse en su totalidad medi
    # Clave secreta Fernet para cifrar las credenciales de Clockify en la base de datos
    FERNET_SECRET_KEY=clave_fernet_generada_en_base64=
 
-   # Cadena de conexion a MongoDB en la red interna de Docker
+   # Cadena de conexion a MongoDB (Docker local o MongoDB Atlas)
    MONGODB_URI=mongodb://db:27017/tfg_bienestar
 
    # Proveedor LLM activo: "gemini" o "openai"
@@ -199,7 +199,7 @@ Para verificar que el enrutador clasifica adecuadamente las intenciones conversa
 ```bash
 python tests/eval_router.py
 ```
-El script ejecuta un conjunto de 28 casos de prueba con repeticiones controladas, reporta la tasa de acierto por categoría y genera la matriz de confusión correspondiente.
+El script ejecuta un conjunto de 29 casos de prueba con repeticiones controladas, reporta la tasa de acierto por categoría y genera la matriz de confusión correspondiente.
 
 ### 3. Pruebas manuales de herramientas MCP con MCP Inspector
 El servidor Model Context Protocol expone herramientas que interactúan con Clockify y MongoDB. Para probar estas herramientas de manera aislada con interfaz gráfica:
@@ -242,28 +242,31 @@ TFG-SABIO/
 │   │   ├── langgraph_service.py  # Grafo de agentes conversacionales con LangGraph
 │   │   ├── orchestrator.py       # Coordinador entre peticiones de usuario y grafo
 │   │   ├── analytics_service.py  # Calculo de correlaciones, habitos y metricas
+│   │   ├── base_chatbot_service.py # Clase base para servicios de chat con LLMs
+│   │   ├── capabilities.py      # Registro de capacidades y herramientas del sistema
 │   │   ├── gemini_service.py     # Integracion con Google GenAI
 │   │   └── openai_service.py     # Integracion con OpenAI
 │   └── tests/                # Bateria de pruebas (pytest y scripts de evaluacion)
 │       ├── test_unit.py          # Pruebas unitarias de servicios
 │       ├── test_api.py           # Pruebas de endpoints REST con TestClient
+│       ├── test_analytics.py     # Pruebas de integracion del servicio de analiticas
 │       ├── test_planner_guard.py # Pruebas de guardas de seguridad en tareas
 │       └── eval_router.py        # Evaluacion cuantitativa del clasificador
 │
-├── frontend/                 # Interfaz de usuario en Next.js (App Router)
-│   ├── Dockerfile            # Imagen Docker del frontend
-│   ├── package.json          # Dependencias y scripts de Node.js
-│   ├── next.config.ts        # Configuracion de Next.js
-│   └── app/                  # Paginas y componentes de la aplicacion
-│       ├── page.tsx          # Pagina de bienvenida
-│       ├── chat/             # Asistente conversacional guiado
-│       ├── login/            # Inicio de sesion
-│       ├── register/         # Registro de estudiantes y profesores
-│       ├── components/       # Componentes visuales y paneles analiticos
-│       └── utils/            # Utilidades de formato, colores y peticiones
-│
-└── docs/                     # Documentacion academica
-    └── memoriaLATEX/         # Codigo fuente LaTeX de la memoria formal del TFG
+└──  frontend/                 # Interfaz de usuario en Next.js (App Router)
+    ├── Dockerfile            # Imagen Docker del frontend
+    ├── package.json          # Dependencias y scripts de Node.js
+    ├── next.config.ts        # Configuracion de Next.js
+    └── app/                  # Paginas y componentes de la aplicacion
+        ├── page.tsx          # Pagina de bienvenida
+        ├── chat/             # Asistente conversacional guiado
+        ├── login/            # Inicio de sesion
+        ├── register/         # Registro de estudiantes y profesores
+        ├── privacy/          # Politica de privacidad y consentimiento
+        ├── components/       # Componentes visuales y paneles analiticos
+        └── utils/            # Utilidades de formato, colores y peticiones
+ 
+
 ```
 
 ---
